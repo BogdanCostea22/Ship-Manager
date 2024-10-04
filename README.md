@@ -29,6 +29,9 @@ https://ship-manager.fly.dev/calculator
 ### Setting Up and Running the Application
 
 1. Clone the repository
+```
+git clone https://github.com/BogdanCostea22/Ship-Manager.git
+```
 2. Install Go dependencies:
    ```
    go mod tidy
