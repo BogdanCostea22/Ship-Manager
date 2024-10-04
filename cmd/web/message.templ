@@ -1,0 +1,13 @@
+package web
+
+templ ErrorMessage(message string) {
+	<div id="error-message" class="text-red-500 mt-2">
+		{ message }
+	</div>
+}
+
+templ SuccessMessage(message string) {
+	<div id="success-message" class="text-green-500 mt-2">
+		{ message }
+	</div>
+}

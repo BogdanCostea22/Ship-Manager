@@ -1,0 +1,72 @@
+package web
+
+import "strconv"
+
+templ IndexPage(packSizes []int) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Pack Calculator</title>
+			<script src="https://unpkg.com/htmx.org@1.9.6"></script>
+			<script src="https://cdn.tailwindcss.com"></script>
+		</head>
+		<body class="bg-gray-100 p-8">
+			<div class="max-w-md mx-auto bg-white p-6 rounded shadow">
+				<h1 class="text-2xl font-bold mb-4">Pack Calculator</h1>
+				<div class="mb-4">
+					<h2 class="text-lg font-semibold mb-2">Add Pack Size</h2>
+					<form hx-post="/add-pack" hx-target="#pack-sizes" hx-swap="outerHTML" class="flex flex-col">
+						<div class="flex">
+							<input type="number" name="size" placeholder="Enter pack size" class="border p-2 flex-grow" required/>
+							<button type="submit" class="bg-blue-500 text-white px-4 py-2 ml-2">Add</button>
+						</div>
+						<div hx-target="this" hx-trigger="errorMessage from:body" hx-swap="outerHTML">
+							@ErrorMessage("")
+						</div>
+					</form>
+				</div>
+				<div class="mb-4">
+					<h2 class="text-lg font-semibold mb-2">Pack Sizes</h2>
+					<div id="pack-sizes" hx-trigger="packSizesChanged from:body" hx-get="/pack-sizes" hx-swap="outerHTML">
+						@PackSizesList(packSizes)
+					</div>
+				</div>
+				<div class="mb-4">
+					<h2 class="text-lg font-semibold mb-2">Calculate Packs</h2>
+					<form hx-post="/calculate" hx-target="#result" class="flex">
+						<input type="number" name="order" placeholder="Enter order size" class="border p-2 flex-grow" required/>
+						<button type="submit" class="bg-green-500 text-white px-4 py-2 ml-2">Calculate</button>
+					</form>
+				</div>
+				<div id="result" class="mt-4"></div>
+			</div>
+		</body>
+		<script>
+			document.body.addEventListener('htmx:afterRequest', function(evt) {
+				if (evt.detail.xhr.status !== 200) {
+					const errorMessage = JSON.parse(evt.detail.xhr.responseText).error;
+					document.getElementById('error-message').textContent = errorMessage;
+				} else {
+					document.getElementById('error-message').textContent = '';
+				}
+			});
+		</script>
+	</html>
+}
+
+templ PackSizesList(packSizes []int) {
+	<div id="pack-sizes">
+		if len(packSizes) == 0 {
+			<p>No pack sizes added yet.</p>
+		} else {
+			<ul class="list-disc pl-5">
+				for _, size := range packSizes {
+					<li>{ strconv.Itoa(size) }</li>
+				}
+			</ul>
+		}
+		<button hx-post="/clear-packs" hx-target="#pack-sizes" hx-swap="outerHTML" class="bg-red-500 text-white px-4 py-2 mt-2">Clear All</button>
+	</div>
+}
