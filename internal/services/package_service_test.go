@@ -23,6 +23,17 @@ func TestPackageService(t *testing.T) {
 		}
 	})
 
+	t.Run("AddPackAndCheckIfThereAreInTheRightOrder", func(t *testing.T) {
+		service.ClearPacks()
+		service.AddPack(250)
+		service.AddPack(500)
+
+		sizes := service.GetPackSizes()
+		if len(sizes) != 2 || sizes[0] != 500 || sizes[1] != 250 {
+			t.Errorf("Expected pack sizes [250], got %v", sizes)
+		}
+	})
+
 	t.Run("ClearPacks", func(t *testing.T) {
 		service.AddPack(500)
 		service.ClearPacks()
@@ -60,11 +71,31 @@ func TestPackageService(t *testing.T) {
 		}{
 			{1, map[int]int{250: 1}},
 			{250, map[int]int{250: 1}},
-			{251, map[int]int{250: 2}},
+			{251, map[int]int{500: 1}},
 			{501, map[int]int{500: 1, 250: 1}},
 			{12001, map[int]int{5000: 2, 2000: 1, 250: 1}},
 		}
 
+		for _, tc := range testCases {
+			result := service.CalculatePacks(tc.order)
+			if !reflect.DeepEqual(result, tc.expected) {
+				t.Errorf("For order %d, expected %v, got %v", tc.order, tc.expected, result)
+			}
+		}
+	})
+
+	t.Run("Calculate optimal order", func(t *testing.T) {
+		service.ClearPacks()
+		service.AddPack(5)
+		service.AddPack(12)
+
+		testCases := []struct {
+			order    int
+			expected map[int]int
+		}{
+			{15, map[int]int{5: 3}},
+			{18, map[int]int{5: 4}},
+		}
 		for _, tc := range testCases {
 			result := service.CalculatePacks(tc.order)
 			if !reflect.DeepEqual(result, tc.expected) {

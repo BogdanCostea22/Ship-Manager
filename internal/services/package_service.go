@@ -1,6 +1,23 @@
 package services
 
-import "Ship_Manager/internal/repositories"
+import (
+	"Ship_Manager/internal/repositories"
+)
+
+type PackSize int
+
+// CalculationResult represents the result of a pack calculation
+type CalculationResult struct {
+	Packs       map[int]int `json:"packs"`       // Map of pack sizes to the number of packs of that size
+	Total       int         `json:"total"`       // Total number of items that will be shipped
+	OrderSize   int         `json:"orderSize"`   // Original order size
+	ExcessItems int         `json:"excessItems"` // Number of items shipped in excess of the order
+	PacksCount  int         `json:"packsCount"`  // Total number of packs used
+}
+
+type PackCalculator struct {
+	PackSizes []PackSize
+}
 
 // PackageService provides methods to manage and calculate packing for orders.
 type PackageService interface {
@@ -42,22 +59,66 @@ func (ps *packageService) GetPackSizes() []int {
 	return ps.repository.GetSizes()
 }
 
-func (ps *packageService) CalculatePacks(order int) map[int]int {
-	result := make(map[int]int)
-	remaining := order
+func (ps *packageService) CalculatePacks(orderSize int) map[int]int {
 	packSizes := ps.repository.GetSizes()
+	largestPack := packSizes[0]
+	switch {
+	case len(packSizes) == 0:
+		{
+			return map[int]int{}
+		}
+		// Handle case where order is smaller than the smallest pack
+	case orderSize < packSizes[len(packSizes)-1]:
+		{
+			return map[int]int{packSizes[len(packSizes)-1]: 1}
 
-	for _, size := range packSizes {
-		count := remaining / size
-		if count > 0 {
-			result[size] = count
-			remaining -= count * size
 		}
 	}
 
-	if remaining > 0 && len(packSizes) > 0 {
-		result[packSizes[len(packSizes)-1]]++
+	// Initialize dp array
+	dp := make([]map[int]int, orderSize+largestPack+1)
+	for i := range dp {
+		dp[i] = make(map[int]int)
 	}
 
-	return result
+	// Fill dp array
+	for i := 1; i <= orderSize+largestPack; i++ {
+		for _, size := range packSizes {
+			switch {
+			case i < size:
+				continue
+			case i == size:
+				dp[i] = map[int]int{size: 1}
+			default:
+				remainder := i - size
+				if len(dp[remainder]) > 0 {
+					newSolution, _ := copyMap(dp[remainder])
+					newSolution[size]++
+
+					if len(dp[i]) == 0 || len(newSolution) < len(dp[i]) {
+						dp[i] = newSolution
+					}
+				}
+			}
+		}
+	}
+
+	// Find the smallest valid solution
+	for i := orderSize; i <= orderSize+largestPack; i++ {
+		if len(dp[i]) > 0 {
+			return dp[i]
+		}
+	}
+
+	// If still no solution, return the minimum number of largest packs
+	return map[int]int{largestPack: (orderSize + largestPack - 1) / largestPack}
+}
+
+func copyMap(originalMap map[int]int) (newSolution map[int]int, totalSpace int) {
+	newSolution = make(map[int]int)
+	for k, v := range originalMap {
+		newSolution[k] = v
+		totalSpace += v
+	}
+	return
 }
